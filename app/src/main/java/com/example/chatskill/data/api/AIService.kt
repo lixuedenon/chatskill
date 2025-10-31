@@ -1,6 +1,4 @@
 // 路径: app/src/main/java/com/example/chatskill/data/api/AIService.kt
-// 文件名: AIService.kt
-// 类型: 【创建】interface
 package com.example.chatskill.data.api
 
 import com.example.chatskill.data.model.AIRequest
@@ -10,7 +8,6 @@ import retrofit2.http.Body
 import retrofit2.http.POST
 
 interface AIService {
-
-    @POST("v1/messages")
+    @POST("chat/completions")
     suspend fun sendMessage(@Body request: AIRequest): Response<AIResponse>
 }

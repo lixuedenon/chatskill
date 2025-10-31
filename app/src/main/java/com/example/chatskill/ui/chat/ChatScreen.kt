@@ -1,8 +1,9 @@
 // 路径: app/src/main/java/com/example/chatskill/ui/chat/ChatScreen.kt
 // 文件名: ChatScreen.kt
-// 操作: 【完整替换】
+// 类型: Kotlin File (Composable Functions)
 package com.example.chatskill.ui.chat
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -11,16 +12,23 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.example.chatskill.data.model.ChatConfig
 import com.example.chatskill.ui.chat.components.ChatInputBar
 import com.example.chatskill.ui.chat.components.MessageList
+import com.example.chatskill.util.ApiKeyManager
+
+private const val TAG = "ChatScreen"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,15 +43,37 @@ fun ChatScreen(
     val inputText by viewModel.inputText.collectAsState()
 
     var showMenu by remember { mutableStateOf(false) }
+    var showApiKeyDialog by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+    val context = LocalContext.current
+
+    val density = LocalDensity.current
+    val imeHeightPx = WindowInsets.ime.getBottom(density)
+    val imeHeightDp = with(density) { imeHeightPx.toDp() }
 
     LaunchedEffect(config) {
         viewModel.initialize(config)
+        if (!ApiKeyManager.hasApiKey(context)) {
+            showApiKeyDialog = true
+        }
+    }
+
+    LaunchedEffect(imeHeightPx) {
+        Log.d(TAG, "🎹 键盘高度变化: ${imeHeightPx}px = ${imeHeightDp}")
+        Log.d(TAG, "📱 键盘状态: ${if (imeHeightPx > 0) "弹起" else "收起"}")
+    }
+
+    if (showApiKeyDialog) {
+        ApiKeyDialog(
+            onDismiss = { showApiKeyDialog = false },
+            onSave = { apiKey ->
+                ApiKeyManager.saveApiKey(context, apiKey)
+                showApiKeyDialog = false
+            }
+        )
     }
 
     Scaffold(
-        // 🔑 关键1：禁用 Scaffold 消费 WindowInsets
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = {
@@ -99,8 +129,11 @@ fun ChatScreen(
                             )
                         }
                         DropdownMenuItem(
-                            text = { Text("设置") },
-                            onClick = { showMenu = false }
+                            text = { Text("设置 API Key") },
+                            onClick = {
+                                showApiKeyDialog = true
+                                showMenu = false
+                            }
                         )
                     }
                 },
@@ -111,40 +144,141 @@ fun ChatScreen(
             )
         }
     ) { paddingValues ->
-        // 🔑 关键2：整个内容区域响应键盘
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.ime)  // 🔑 响应键盘
-                .padding(paddingValues)
                 .background(Color(0xFFFAFAFA))
+                .statusBarsPadding()
+                .padding(paddingValues)
+                .imePadding()
         ) {
-            // 🔑 关键3：消息列表用 weight 自适应
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .pointerInput(Unit) {
                         detectTapGestures(
-                            onTap = { focusManager.clearFocus() }
+                            onTap = {
+                                Log.d(TAG, "👆 点击空白区域，收起键盘")
+                                focusManager.clearFocus()
+                            }
                         )
                     }
             ) {
                 MessageList(
                     messages = messages,
                     themeColor = config.getThemeColor(),
-                    isLoading = isLoading
+                    isLoading = isLoading,
+                    imeHeight = imeHeightPx
                 )
             }
 
-            // 输入栏
             ChatInputBar(
                 value = inputText,
                 onValueChange = { viewModel.onInputTextChange(it) },
-                onSendClick = { viewModel.sendMessage() },
+                onSendClick = {
+                    Log.d(TAG, "📤 发送消息: $inputText")
+                    viewModel.sendMessage()
+                },
                 themeColor = config.getThemeColor(),
                 placeholder = config.placeholder
             )
+        }
+    }
+}
+
+@Composable
+fun ApiKeyDialog(
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    var apiKey by remember { mutableStateOf("") }
+    var showError by remember { mutableStateOf(false) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = MaterialTheme.shapes.large
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "🔑 设置 API Key",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "请输入你的 OpenAI API Key",
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = apiKey,
+                    onValueChange = {
+                        apiKey = it.trim()
+                        showError = false
+                    },
+                    label = { Text("API Key") },
+                    placeholder = { Text("sk-...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    isError = showError
+                )
+
+                if (showError) {
+                    Text(
+                        text = "API Key 不能为空",
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "获取 API Key: https://platform.openai.com/api-keys",
+                    fontSize = 12.sp,
+                    color = Color.Blue,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("取消")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            val trimmedKey = apiKey.trim()
+                            if (trimmedKey.isBlank()) {
+                                showError = true
+                            } else {
+                                onSave(trimmedKey)
+                            }
+                        }
+                    ) {
+                        Text("保存")
+                    }
+                }
+            }
         }
     }
 }

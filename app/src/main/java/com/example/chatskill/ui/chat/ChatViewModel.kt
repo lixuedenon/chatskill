@@ -1,9 +1,8 @@
 // 路径: app/src/main/java/com/example/chatskill/ui/chat/ChatViewModel.kt
-// 文件名: ChatViewModel.kt
-// 类型: 【创建】class
 package com.example.chatskill.ui.chat
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.chatskill.data.model.ChatConfig
 import com.example.chatskill.data.model.Message
@@ -14,9 +13,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class ChatViewModel : ViewModel() {
+class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = ChatRepository()
+    private val repository = ChatRepository(application.applicationContext)
 
     private val _messages = MutableStateFlow<List<Message>>(emptyList())
     val messages: StateFlow<List<Message>> = _messages.asStateFlow()
@@ -38,17 +37,12 @@ class ChatViewModel : ViewModel() {
         _inputText.value = text
     }
 
-    /**
-     * 发送消息（用户对AI）
-     */
     fun sendMessage() {
         val text = _inputText.value.trim()
         if (text.isEmpty() || _isLoading.value) return
 
-        // 清空输入框
         _inputText.value = ""
 
-        // 添加用户消息
         val userMessage = Message(
             content = text,
             isUser = true,
@@ -56,7 +50,6 @@ class ChatViewModel : ViewModel() {
         )
         _messages.value = _messages.value + userMessage
 
-        // 获取AI回复
         _isLoading.value = true
         viewModelScope.launch {
             try {
@@ -76,9 +69,6 @@ class ChatViewModel : ViewModel() {
         }
     }
 
-    /**
-     * 启动AI对AI对话
-     */
     fun startAIToAIConversation() {
         if (_isLoading.value) return
 

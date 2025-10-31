@@ -1,18 +1,28 @@
 // 路径: app/src/main/java/com/example/chatskill/data/model/AIResponse.kt
-// 文件名: AIResponse.kt
-// 类型: 【创建】data class
 package com.example.chatskill.data.model
 
 data class AIResponse(
     val id: String,
-    val type: String,
-    val role: String,
-    val content: List<ContentBlock>,
+    val `object`: String,
+    val created: Long,
     val model: String,
-    val stop_reason: String?
+    val choices: List<Choice>,
+    val usage: Usage?
 )
 
-data class ContentBlock(
-    val type: String,
-    val text: String
+data class Choice(
+    val index: Int,
+    val message: MessageContent,
+    val finish_reason: String?
+)
+
+data class MessageContent(
+    val role: String,
+    val content: String
+)
+
+data class Usage(
+    val prompt_tokens: Int,
+    val completion_tokens: Int,
+    val total_tokens: Int
 )

@@ -1,6 +1,4 @@
 // 路径: app/src/main/java/com/example/chatskill/ui/chat/ChatActivity.kt
-// 文件名: ChatActivity.kt
-// 操作: 【完整替换】
 package com.example.chatskill.ui.chat
 
 import android.content.Context
@@ -8,8 +6,10 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.material3.MaterialTheme
+import androidx.core.view.WindowCompat
 import com.example.chatskill.data.model.ChatConfig
 
 class ChatActivity : ComponentActivity() {
@@ -18,6 +18,9 @@ class ChatActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        enableEdgeToEdge()
 
         val config = intent.getSerializableExtra(EXTRA_CHAT_CONFIG) as? ChatConfig
         val enableAIToAI = intent.getBooleanExtra(EXTRA_ENABLE_AI_TO_AI, false)

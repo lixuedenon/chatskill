@@ -1,7 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 路径: app/src/main/AndroidManifest.xml -->
-<!-- 文件名: AndroidManifest.xml -->
-<!-- 操作: 【确认配置】-->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
@@ -40,7 +37,6 @@
             android:exported="false"
             android:theme="@style/Theme.ChatSkill" />
 
-        <!-- 🔑 确保这个配置正确 -->
         <activity
             android:name=".ui.chat.ChatActivity"
             android:exported="false"
