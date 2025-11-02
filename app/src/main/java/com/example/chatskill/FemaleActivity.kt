@@ -1,6 +1,3 @@
-// 路径: app/src/main/java/com/example/chatskill/FemaleActivity.kt
-// 文件名: FemaleActivity.kt
-// 类型: 【修改】Activity class
 package com.example.chatskill
 
 import android.os.Bundle
@@ -19,7 +16,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.chatskill.data.model.ChatConfig
+import com.example.chatskill.ui.character.CharacterCustomizationActivity
 import com.example.chatskill.ui.chat.ChatActivity
+import com.example.chatskill.util.Constants
 
 class FemaleActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -30,6 +29,13 @@ class FemaleActivity : ComponentActivity() {
                     onBackClick = { finish() },
                     onModuleClick = { config ->
                         ChatActivity.start(this, config)
+                    },
+                    onBasicChatClick = {
+                        CharacterCustomizationActivity.start(
+                            context = this,
+                            isMale = false,
+                            themeColor = Constants.Colors.FEMALE_THEME
+                        )
                     }
                 )
             }
@@ -40,7 +46,8 @@ class FemaleActivity : ComponentActivity() {
 @Composable
 fun FemaleScreen(
     onBackClick: () -> Unit,
-    onModuleClick: (ChatConfig) -> Unit
+    onModuleClick: (ChatConfig) -> Unit,
+    onBasicChatClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -48,7 +55,6 @@ fun FemaleScreen(
             .background(Color(0xFFF5F5F5))
             .padding(16.dp)
     ) {
-        // 标题栏
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -77,7 +83,6 @@ fun FemaleScreen(
             Spacer(modifier = Modifier.size(60.dp, 40.dp))
         }
 
-        // 模块列表
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -87,7 +92,7 @@ fun FemaleScreen(
             ModuleButton(
                 text = "1. 基础对话",
                 color = Color(0xFFE91E63),
-                onClick = { onModuleClick(ChatConfig.forBasicChat(false)) }
+                onClick = onBasicChatClick
             )
             ModuleButton(
                 text = "2. 社交雷达",

@@ -1,4 +1,3 @@
-// 路径: app/src/main/java/com/example/chatskill/data/model/AIResponse.kt
 package com.example.chatskill.data.model
 
 data class AIResponse(
@@ -25,4 +24,14 @@ data class Usage(
     val prompt_tokens: Int,
     val completion_tokens: Int,
     val total_tokens: Int
+)
+
+data class AIStructuredResponse(
+    val response: String,
+    val affinity_change: Int,
+    val affinity_reason: String,
+    val current_affinity: Int,
+    val current_mood: String,
+    val should_continue: Boolean,
+    val warning_count: Int
 )

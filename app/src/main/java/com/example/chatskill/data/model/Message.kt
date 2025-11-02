@@ -1,6 +1,3 @@
-// 路径: app/src/main/java/com/example/chatskill/data/model/Message.kt
-// 文件名: Message.kt
-// 类型: 【创建】data class
 package com.example.chatskill.data.model
 
 data class Message(
@@ -9,11 +6,16 @@ data class Message(
     val isUser: Boolean,
     val timestamp: Long = System.currentTimeMillis(),
     val avatarUrl: String? = null,
-    val status: MessageStatus = MessageStatus.SENT
+    val status: MessageStatus = MessageStatus.SENT,
+    val affinityChange: Int = 0,
+    val affinityReason: String = "",
+    val currentAffinity: Int = 50,
+    val aiMood: String = "",
+    val isTermination: Boolean = false
 )
 
 enum class MessageStatus {
-    SENDING,    // 发送中
-    SENT,       // 已发送
-    FAILED      // 发送失败
+    SENDING,
+    SENT,
+    FAILED
 }

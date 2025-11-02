@@ -1,6 +1,3 @@
-// 路径: app/src/main/java/com/example/chatskill/ui/chat/ChatScreen.kt
-// 文件名: ChatScreen.kt
-// 类型: Kotlin File (Composable Functions)
 package com.example.chatskill.ui.chat
 
 import android.util.Log
@@ -36,11 +33,14 @@ fun ChatScreen(
     config: ChatConfig,
     viewModel: ChatViewModel,
     onBackClick: () -> Unit,
+    onReviewClick: () -> Unit = {},
     enableAIToAI: Boolean = false
 ) {
     val messages by viewModel.messages.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val inputText by viewModel.inputText.collectAsState()
+    val canShowReview by viewModel.canShowReview.collectAsState()
+    val isMaxRoundReached by viewModel.isMaxRoundReached.collectAsState()
 
     var showMenu by remember { mutableStateOf(false) }
     var showApiKeyDialog by remember { mutableStateOf(false) }
@@ -52,7 +52,6 @@ fun ChatScreen(
     val imeHeightDp = with(density) { imeHeightPx.toDp() }
 
     LaunchedEffect(config) {
-        viewModel.initialize(config)
         if (!ApiKeyManager.hasApiKey(context)) {
             showApiKeyDialog = true
         }
@@ -119,6 +118,17 @@ fun ChatScreen(
                                 showMenu = false
                             }
                         )
+
+                        if (canShowReview) {
+                            DropdownMenuItem(
+                                text = { Text("对话复盘") },
+                                onClick = {
+                                    onReviewClick()
+                                    showMenu = false
+                                }
+                            )
+                        }
+
                         if (enableAIToAI) {
                             DropdownMenuItem(
                                 text = { Text("AI对AI对话") },
@@ -128,6 +138,7 @@ fun ChatScreen(
                                 }
                             )
                         }
+
                         DropdownMenuItem(
                             text = { Text("设置 API Key") },
                             onClick = {
@@ -173,16 +184,30 @@ fun ChatScreen(
                 )
             }
 
-            ChatInputBar(
-                value = inputText,
-                onValueChange = { viewModel.onInputTextChange(it) },
-                onSendClick = {
-                    Log.d(TAG, "📤 发送消息: $inputText")
-                    viewModel.sendMessage()
-                },
-                themeColor = config.getThemeColor(),
-                placeholder = config.placeholder
-            )
+            if (!isMaxRoundReached) {
+                ChatInputBar(
+                    value = inputText,
+                    onValueChange = { viewModel.onInputTextChange(it) },
+                    onSendClick = {
+                        Log.d(TAG, "📤 发送消息: $inputText")
+                        viewModel.sendMessage()
+                    },
+                    themeColor = config.getThemeColor(),
+                    placeholder = config.placeholder
+                )
+            } else {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color.LightGray.copy(alpha = 0.3f)
+                ) {
+                    Text(
+                        text = "对话已结束",
+                        modifier = Modifier.padding(16.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                }
+            }
         }
     }
 }
