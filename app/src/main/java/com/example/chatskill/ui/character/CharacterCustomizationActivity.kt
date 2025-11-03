@@ -1,4 +1,5 @@
-// 文件路径: app/src/main/java/com/example/chatskill/ui/character/CharacterCustomizationActivity.kt | 类型: class
+// 路径: app/src/main/java/com/example/chatskill/ui/character/CharacterCustomizationActivity.kt
+// 类型: class
 
 package com.example.chatskill.ui.character
 

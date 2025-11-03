@@ -1,3 +1,6 @@
+// 路径: app/src/main/java/com/example/chatskill/ui/chat/ChatScreen.kt
+// 类型: composable
+
 package com.example.chatskill.ui.chat
 
 import android.util.Log
@@ -24,6 +27,7 @@ import com.example.chatskill.data.model.ChatConfig
 import com.example.chatskill.ui.chat.components.ChatInputBar
 import com.example.chatskill.ui.chat.components.MessageList
 import com.example.chatskill.util.ApiKeyManager
+import com.example.chatskill.util.ToastManager
 
 private const val TAG = "ChatScreen"
 
@@ -41,6 +45,8 @@ fun ChatScreen(
     val inputText by viewModel.inputText.collectAsState()
     val canShowReview by viewModel.canShowReview.collectAsState()
     val isMaxRoundReached by viewModel.isMaxRoundReached.collectAsState()
+    val showToastWarning by viewModel.showToastWarning.collectAsState()
+    val shouldForceExit by viewModel.shouldForceExit.collectAsState()
 
     var showMenu by remember { mutableStateOf(false) }
     var showApiKeyDialog by remember { mutableStateOf(false) }
@@ -50,6 +56,13 @@ fun ChatScreen(
     val density = LocalDensity.current
     val imeHeightPx = WindowInsets.ime.getBottom(density)
     val imeHeightDp = with(density) { imeHeightPx.toDp() }
+
+    LaunchedEffect(showToastWarning) {
+        showToastWarning?.let { violationCount ->
+            ToastManager.showViolationWarning(context, violationCount)
+            viewModel.clearToastWarning()
+        }
+    }
 
     LaunchedEffect(config) {
         if (!ApiKeyManager.hasApiKey(context)) {
@@ -133,7 +146,6 @@ fun ChatScreen(
                             DropdownMenuItem(
                                 text = { Text("AI对AI对话") },
                                 onClick = {
-                                    viewModel.startAIToAIConversation()
                                     showMenu = false
                                 }
                             )
@@ -184,7 +196,7 @@ fun ChatScreen(
                 )
             }
 
-            if (!isMaxRoundReached) {
+            if (!isMaxRoundReached && !shouldForceExit) {
                 ChatInputBar(
                     value = inputText,
                     onValueChange = { viewModel.onInputTextChange(it) },
@@ -201,7 +213,7 @@ fun ChatScreen(
                     color = Color.LightGray.copy(alpha = 0.3f)
                 ) {
                     Text(
-                        text = "对话已结束",
+                        text = if (shouldForceExit) "对话已终止" else "对话已结束",
                         modifier = Modifier.padding(16.dp),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.Gray

@@ -1,4 +1,5 @@
-// 文件路径: app/src/main/java/com/example/chatskill/data/model/ConversationRecord.kt | 类型: data class
+// 路径: app/src/main/java/com/example/chatskill/data/model/ConversationRecord.kt
+// 类型: data class
 
 package com.example.chatskill.data.model
 

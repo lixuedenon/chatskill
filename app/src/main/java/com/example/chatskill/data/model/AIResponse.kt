@@ -1,3 +1,6 @@
+// 路径: app/src/main/java/com/example/chatskill/data/model/AIResponse.kt
+// 类型: data class
+
 package com.example.chatskill.data.model
 
 data class AIResponse(
@@ -33,5 +36,7 @@ data class AIStructuredResponse(
     val current_affinity: Int,
     val current_mood: String,
     val should_continue: Boolean,
-    val warning_count: Int
+    val warning_count: Int,
+    val violation_detected: Boolean = false,
+    val violation_type: String = "none"
 )

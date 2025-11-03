@@ -1,3 +1,6 @@
+// 路径: app/src/main/java/com/example/chatskill/data/model/Message.kt
+// 类型: data class
+
 package com.example.chatskill.data.model
 
 data class Message(
@@ -11,7 +14,8 @@ data class Message(
     val affinityReason: String = "",
     val currentAffinity: Int = 50,
     val aiMood: String = "",
-    val isTermination: Boolean = false
+    val isTermination: Boolean = false,
+    val violationType: ViolationType = ViolationType.NONE
 )
 
 enum class MessageStatus {

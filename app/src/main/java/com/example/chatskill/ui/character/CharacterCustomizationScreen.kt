@@ -1,3 +1,6 @@
+// 路径: app/src/main/java/com/example/chatskill/ui/character/CharacterCustomizationScreen.kt
+// 类型: composable
+
 package com.example.chatskill.ui.character
 
 import androidx.compose.foundation.background
@@ -17,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.example.chatskill.data.model.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,6 +36,34 @@ fun CharacterCustomizationScreen(
     val selectedPersonality by viewModel.selectedPersonality.collectAsState()
     val selectedEducation by viewModel.selectedEducation.collectAsState()
     val isValid by viewModel.isValid.collectAsState()
+    val isGenerating by viewModel.isGenerating.collectAsState()
+    val generationError by viewModel.generationError.collectAsState()
+    val generatedCharacter by viewModel.generatedCharacter.collectAsState()
+
+    LaunchedEffect(generatedCharacter) {
+        generatedCharacter?.let { character ->
+            onConfirm(character)
+            viewModel.clearGeneratedCharacter()
+        }
+    }
+
+    if (isGenerating) {
+        LoadingDialog()
+    }
+
+    if (generationError != null) {
+        ErrorDialog(
+            errorMessage = generationError!!,
+            onRetry = {
+                viewModel.clearError()
+                val gender = if (isMale) Gender.FEMALE else Gender.MALE
+                viewModel.generateCharacter(gender)
+            },
+            onDismiss = {
+                viewModel.clearError()
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -59,7 +91,7 @@ fun CharacterCustomizationScreen(
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             Text(
-                text = "为你的聊天对象设定基本信息\n（系统将自动分配姓名）",
+                text = "为你的聊天对象设定基本信息\n（系统将自动生成姓名、职业和兴趣爱好）",
                 fontSize = 14.sp,
                 color = Color.Gray
             )
@@ -89,15 +121,13 @@ fun CharacterCustomizationScreen(
             
             Button(
                 onClick = {
-                    val character = viewModel.createCustomCharacter(
-                        gender = if (isMale) Gender.FEMALE else Gender.MALE
-                    )
-                    character?.let { onConfirm(it) }
+                    val gender = if (isMale) Gender.FEMALE else Gender.MALE
+                    viewModel.generateCharacter(gender)
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                enabled = isValid,
+                enabled = isValid && !isGenerating,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = themeColor,
                     disabledContainerColor = Color.Gray
@@ -112,6 +142,68 @@ fun CharacterCustomizationScreen(
             }
         }
     }
+}
+
+@Composable
+private fun LoadingDialog() {
+    Dialog(onDismissRequest = { }) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(48.dp),
+                    strokeWidth = 4.dp
+                )
+                Text(
+                    text = "正在为您匹配对象...",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = "请稍候",
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ErrorDialog(
+    errorMessage: String,
+    onRetry: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(text = "生成失败")
+        },
+        text = {
+            Text(text = errorMessage)
+        },
+        confirmButton = {
+            TextButton(onClick = onRetry) {
+                Text("重试")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
 }
 
 @Composable
