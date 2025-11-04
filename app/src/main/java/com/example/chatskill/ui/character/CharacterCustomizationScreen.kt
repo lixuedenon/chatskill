@@ -30,19 +30,20 @@ fun CharacterCustomizationScreen(
     themeColor: Color,
     viewModel: CharacterCustomizationViewModel,
     onBackClick: () -> Unit,
-    onConfirm: (CustomCharacter) -> Unit
+    onConfirm: (Pair<CustomCharacter, CharacterBackground>) -> Unit
 ) {
     val selectedAgeRange by viewModel.selectedAgeRange.collectAsState()
     val selectedPersonality by viewModel.selectedPersonality.collectAsState()
     val selectedEducation by viewModel.selectedEducation.collectAsState()
+    val selectedWorkStatus by viewModel.selectedWorkStatus.collectAsState()
     val isValid by viewModel.isValid.collectAsState()
     val isGenerating by viewModel.isGenerating.collectAsState()
     val generationError by viewModel.generationError.collectAsState()
-    val generatedCharacter by viewModel.generatedCharacter.collectAsState()
+    val generatedCharacterWithBackground by viewModel.generatedCharacterWithBackground.collectAsState()
 
-    LaunchedEffect(generatedCharacter) {
-        generatedCharacter?.let { character ->
-            onConfirm(character)
+    LaunchedEffect(generatedCharacterWithBackground) {
+        generatedCharacterWithBackground?.let { characterWithBackground ->
+            onConfirm(characterWithBackground)
             viewModel.clearGeneratedCharacter()
         }
     }
@@ -95,30 +96,38 @@ fun CharacterCustomizationScreen(
                 fontSize = 14.sp,
                 color = Color.Gray
             )
-            
+
             SectionTitle("年龄段")
             AgeRangeSelector(
                 selected = selectedAgeRange,
                 onSelected = viewModel::onAgeRangeSelected,
                 themeColor = themeColor
             )
-            
+
             SectionTitle("性格")
             PersonalitySelector(
                 selected = selectedPersonality,
                 onSelected = viewModel::onPersonalitySelected,
                 themeColor = themeColor
             )
-            
+
             SectionTitle("教育程度")
             EducationSelector(
                 selected = selectedEducation,
                 onSelected = viewModel::onEducationSelected,
                 themeColor = themeColor
             )
-            
+
+            SectionTitle("职业状态")
+            WorkStatusSelector(
+                selected = selectedWorkStatus,
+                selectedEducation = selectedEducation,
+                onSelected = viewModel::onWorkStatusSelected,
+                themeColor = themeColor
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             Button(
                 onClick = {
                     val gender = if (isMale) Gender.FEMALE else Gender.MALE
@@ -272,6 +281,39 @@ private fun EducationSelector(
 }
 
 @Composable
+private fun WorkStatusSelector(
+    selected: WorkStatus?,
+    selectedEducation: EducationLevel?,
+    onSelected: (WorkStatus) -> Unit,
+    themeColor: Color
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        WorkStatus.values().forEach { workStatus ->
+            val isDisabled = workStatus == WorkStatus.STUDYING &&
+                             selectedEducation != null &&
+                             !EducationLevel.canBeStudying(selectedEducation)
+
+            SelectableCard(
+                title = workStatus.displayName,
+                description = if (isDisabled) {
+                    "该学历不适用于上学状态"
+                } else {
+                    workStatus.description
+                },
+                isSelected = selected == workStatus,
+                onClick = {
+                    if (!isDisabled) {
+                        onSelected(workStatus)
+                    }
+                },
+                themeColor = themeColor,
+                isEnabled = !isDisabled
+            )
+        }
+    }
+}
+
+@Composable
 private fun SelectableChip(
     text: String,
     isSelected: Boolean,
@@ -310,18 +352,23 @@ private fun SelectableCard(
     description: String,
     isSelected: Boolean,
     onClick: () -> Unit,
-    themeColor: Color
+    themeColor: Color,
+    isEnabled: Boolean = true
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(enabled = isEnabled, onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) themeColor.copy(alpha = 0.1f) else Color.White
+            containerColor = when {
+                !isEnabled -> Color.LightGray.copy(alpha = 0.3f)
+                isSelected -> themeColor.copy(alpha = 0.1f)
+                else -> Color.White
+            }
         ),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isSelected) 4.dp else 1.dp
+            defaultElevation = if (isSelected && isEnabled) 4.dp else 1.dp
         )
     ) {
         Row(
@@ -332,9 +379,12 @@ private fun SelectableCard(
         ) {
             RadioButton(
                 selected = isSelected,
-                onClick = onClick,
+                onClick = if (isEnabled) onClick else null,
+                enabled = isEnabled,
                 colors = RadioButtonDefaults.colors(
-                    selectedColor = themeColor
+                    selectedColor = themeColor,
+                    disabledSelectedColor = Color.Gray,
+                    disabledUnselectedColor = Color.Gray
                 )
             )
             Spacer(modifier = Modifier.width(12.dp))
@@ -342,13 +392,14 @@ private fun SelectableCard(
                 Text(
                     text = title,
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = if (isEnabled) Color.Black else Color.Gray
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = description,
                     fontSize = 14.sp,
-                    color = Color.Gray
+                    color = if (isEnabled) Color.Gray else Color.LightGray
                 )
             }
         }

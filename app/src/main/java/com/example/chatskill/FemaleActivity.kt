@@ -1,129 +1,238 @@
-package com.example.chatskill
+// 路径: app/src/main/java/com/example/chatskill/ui/FemaleActivity.kt
+// 类型: class
 
+package com.example.chatskill.ui
+
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.chatskill.data.model.ChatConfig
+import com.example.chatskill.data.model.ChatType
 import com.example.chatskill.ui.character.CharacterCustomizationActivity
 import com.example.chatskill.ui.chat.ChatActivity
-import com.example.chatskill.util.Constants
 
 class FemaleActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
-                FemaleScreen(
-                    onBackClick = { finish() },
-                    onModuleClick = { config ->
-                        ChatActivity.start(this, config)
-                    },
-                    onBasicChatClick = {
-                        CharacterCustomizationActivity.start(
-                            context = this,
-                            isMale = false,
-                            themeColor = Constants.Colors.FEMALE_THEME
-                        )
+            FemaleScreen(
+                onBackClick = { finish() }
+            )
+        }
+    }
+
+    companion object {
+        fun start(context: Context) {
+            val intent = Intent(context, FemaleActivity::class.java)
+            context.startActivity(intent)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FemaleScreen(
+    onBackClick: () -> Unit
+) {
+    val context = LocalContext.current
+    val themeColor = 0xFFE91E63L
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("选择对话场景") },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.Default.ArrowBack, "返回")
                     }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color(0xFFE91E63),
+                    titleContentColor = Color.White,
+                    navigationIconContentColor = Color.White
                 )
-            }
+            )
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = "选择一个场景开始对话",
+                fontSize = 16.sp,
+                color = Color.Gray
+            )
+
+            ModuleButton(
+                text = "2. 社交雷达",
+                color = Color(0xFFE91E63),
+                onClick = {
+                    ChatActivity.start(
+                        context = context,
+                        config = ChatConfig(
+                            chatType = ChatType.BASIC_CHAT,
+                            title = "社交雷达",
+                            themeColor = themeColor,
+                            systemPrompt = "你是一个社交情境分析助手。",
+                            avatarUrl = null,
+                            enableVoice = false,
+                            placeholder = "描述你的社交困扰..."
+                        ),
+                        enableAIToAI = false
+                    )
+                }
+            )
+
+            ModuleButton(
+                text = "3. 男友养成",
+                color = Color(0xFFE91E63),
+                onClick = {
+                    ChatActivity.start(
+                        context = context,
+                        config = ChatConfig(
+                            chatType = ChatType.ROLE_PLAY,
+                            title = "男友养成",
+                            themeColor = themeColor,
+                            systemPrompt = "你是一个理想的男友角色。",
+                            avatarUrl = null,
+                            enableVoice = false,
+                            placeholder = "和我聊聊天吧..."
+                        ),
+                        enableAIToAI = false
+                    )
+                }
+            )
+
+            ModuleButton(
+                text = "4. 自定义男友",
+                color = Color(0xFFE91E63),
+                onClick = {
+                    CharacterCustomizationActivity.start(
+                        context = context,
+                        isMale = true,
+                        themeColor = themeColor
+                    )
+                }
+            )
+
+            ModuleButton(
+                text = "5. 真实聊天助手",
+                color = Color(0xFFE91E63),
+                onClick = {
+                    ChatActivity.start(
+                        context = context,
+                        config = ChatConfig(
+                            chatType = ChatType.BASIC_CHAT,
+                            title = "真实聊天助手",
+                            themeColor = themeColor,
+                            systemPrompt = "你是一个聊天分析助手。",
+                            avatarUrl = null,
+                            enableVoice = false,
+                            placeholder = "贴入聊天记录..."
+                        ),
+                        enableAIToAI = false
+                    )
+                }
+            )
+
+            ModuleButton(
+                text = "6. 实用技能",
+                color = Color(0xFFE91E63),
+                onClick = {
+                    ChatActivity.start(
+                        context = context,
+                        config = ChatConfig(
+                            chatType = ChatType.BASIC_CHAT,
+                            title = "实用技能",
+                            themeColor = themeColor,
+                            systemPrompt = "你是一个生活技能导师。",
+                            avatarUrl = null,
+                            enableVoice = false,
+                            placeholder = "我想学习..."
+                        ),
+                        enableAIToAI = false
+                    )
+                }
+            )
+
+            ModuleButton(
+                text = "7. 反PUA",
+                color = Color(0xFFE91E63),
+                onClick = {
+                    ChatActivity.start(
+                        context = context,
+                        config = ChatConfig(
+                            chatType = ChatType.BASIC_CHAT,
+                            title = "反PUA助手",
+                            themeColor = themeColor,
+                            systemPrompt = "你是一个反PUA专家。",
+                            avatarUrl = null,
+                            enableVoice = false,
+                            placeholder = "描述你的情况..."
+                        ),
+                        enableAIToAI = false
+                    )
+                }
+            )
         }
     }
 }
 
 @Composable
-fun FemaleScreen(
-    onBackClick: () -> Unit,
-    onModuleClick: (ChatConfig) -> Unit,
-    onBasicChatClick: () -> Unit
+private fun ModuleButton(
+    text: String,
+    color: Color,
+    onClick: () -> Unit
 ) {
-    Column(
+    Card(
         modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF5F5F5))
-            .padding(16.dp)
+            .fillMaxWidth()
+            .height(80.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = color.copy(alpha = 0.1f)
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp
+        )
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 24.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Button(
-                onClick = onBackClick,
-                modifier = Modifier.size(60.dp, 40.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFE91E63)
-                )
-            ) {
-                Text(text = "←", fontSize = 20.sp)
-            }
-
-            Text(
-                text = "女生篇",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF333333),
-                modifier = Modifier.weight(1f),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.size(60.dp, 40.dp))
-        }
-
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(16.dp),
+            contentAlignment = Alignment.CenterStart
         ) {
-            ModuleButton(
-                text = "1. 基础对话",
-                color = Color(0xFFE91E63),
-                onClick = onBasicChatClick
-            )
-            ModuleButton(
-                text = "2. 社交雷达",
-                color = Color(0xFFE91E63),
-                onClick = { onModuleClick(ChatConfig.forSocialRadar(false)) }
-            )
-            ModuleButton(
-                text = "3. 男友养成",
-                color = Color(0xFFE91E63),
-                onClick = { onModuleClick(ChatConfig.forBoyfriendGrowth()) }
-            )
-            ModuleButton(
-                text = "4. 定制男友",
-                color = Color(0xFFE91E63),
-                onClick = { onModuleClick(ChatConfig.forCustomBoyfriend()) }
-            )
-            ModuleButton(
-                text = "5. 真人对话助手",
-                color = Color(0xFFE91E63),
-                onClick = { onModuleClick(ChatConfig.forRealChatAssistant(false)) }
-            )
-            ModuleButton(
-                text = "6. 实战训练营",
-                color = Color(0xFFE91E63),
-                onClick = { onModuleClick(ChatConfig.forPracticalTraining(false)) }
-            )
-            ModuleButton(
-                text = "7. 反PUA模块",
-                color = Color(0xFFE91E63),
-                onClick = { onModuleClick(ChatConfig.forAntiPUA()) },
-                isLast = true
+            Text(
+                text = text,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = color
             )
         }
     }

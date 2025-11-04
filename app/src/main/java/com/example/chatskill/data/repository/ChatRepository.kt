@@ -23,7 +23,8 @@ class ChatRepository(private val context: Context) {
         gender: Gender,
         ageRange: AgeRange,
         personality: PersonalityType,
-        education: EducationLevel
+        education: EducationLevel,
+        workStatus: WorkStatus
     ): Flow<CharacterProfile> = flow {
         val apiKey = ApiKeyManager.getApiKey(context)
 
@@ -35,44 +36,82 @@ class ChatRepository(private val context: Context) {
 
         val genderText = if (gender == Gender.FEMALE) "女生" else "男生"
         val ageText = "${ageRange.getMiddleAge()}岁（${ageRange.displayName}）"
-        val personalityText = personality.description
         val educationText = education.displayName
+        val workStatusText = workStatus.displayName
+
+        val occupationRule = when {
+            workStatus == WorkStatus.STUDYING && education == EducationLevel.UNDERGRADUATE ->
+                "大学生-XX专业（如：大学生-计算机专业）"
+            workStatus == WorkStatus.STUDYING && education == EducationLevel.GRADUATE ->
+                "研究生在读-XX专业"
+            workStatus == WorkStatus.STUDYING && education == EducationLevel.DOCTORATE ->
+                "博士在读-XX专业"
+
+            workStatus == WorkStatus.EMPLOYED && education == EducationLevel.MIDDLE_SCHOOL ->
+                "初中学历职业（如：工厂工人、服务员）"
+            workStatus == WorkStatus.EMPLOYED && education == EducationLevel.HIGH_SCHOOL ->
+                "高中学历职业（如：销售员、客服）"
+            workStatus == WorkStatus.EMPLOYED && education == EducationLevel.UNDERGRADUATE ->
+                "大学学历职业（如：程序员、设计师）"
+            workStatus == WorkStatus.EMPLOYED && education == EducationLevel.GRADUATE ->
+                "研究生学历职业（如：工程师、分析师）"
+            workStatus == WorkStatus.EMPLOYED && education == EducationLevel.DOCTORATE ->
+                "博士学历职业（如：高校教师、研究员）"
+
+            workStatus == WorkStatus.UNEMPLOYED ->
+                "待业中（${educationText}学历）"
+
+            else -> "根据年龄和学历合理生成"
+        }
+
+        val workHistoryRule = when(workStatus) {
+            WorkStatus.STUDYING -> "无（专心学业）"
+            WorkStatus.EMPLOYED -> "当前在XX公司工作"
+            WorkStatus.UNEMPLOYED -> when(education) {
+                EducationLevel.MIDDLE_SCHOOL, EducationLevel.HIGH_SCHOOL ->
+                    "之前在XX做过XX（如：之前在工厂做工人，做了1年多）"
+                else ->
+                    "之前在XX公司做XX（如：之前在小公司做销售，做了2年）"
+            }
+        }
 
         val prompt = """
-请为一个中国${genderText}生成完整的角色画像。
+请为一个中国${genderText}生成完整的角色画像和简历。
 
 角色基本信息：
 - 性别：${genderText}
 - 年龄：${ageText}
-- 性格：${personalityText}
 - 教育程度：${educationText}
+- 职业状态：${workStatusText}
 
 **重要：必须严格按照以下JSON格式返回，不要有任何其他文字！**
 
 {
   "name": "2-3个字的中文名字",
   "occupation": "职业或专业",
+  "education_history": "教育经历（简短）",
+  "work_history": "工作经历（简短）",
+  "hobby_development": "爱好是怎么培养的（简短）",
   "expert_hobbies": [
     {"name": "爱好1", "level": 4},
     {"name": "爱好2", "level": 3}
   ],
   "casual_hobbies": [
     {"name": "爱好3", "level": 2},
-    {"name": "爱好4", "level": 1},
-    {"name": "爱好5", "level": 1}
+    {"name": "爱好4", "level": 1}
   ]
 }
 
 生成规则：
-1. name：好听自然的中文名字（如：思涵、浩然、婉儿）
-2. occupation：根据年龄和教育程度合理生成
-   - 学生要注明专业（如："大学生-计算机专业"）
-   - 在职要写职业（如："咖啡店店员"、"程序员"）
-3. expert_hobbies：1-3个擅长的爱好，level在3-5之间
-4. casual_hobbies：2-4个一般了解的爱好，level在1-2之间
-5. 爱好要常见（烹饪、运动、游戏、音乐、阅读等），符合性格
+1. name：2-3个字的中文名字
+2. occupation：${occupationRule}
+3. education_history：XX大学XX专业 或 XX高中毕业
+4. work_history：${workHistoryRule}
+5. hobby_development：如：从小喜欢画画，大学时加入了绘画社
+6. expert_hobbies：1-3个，level在3-5之间
+7. casual_hobbies：2-4个，level在1-2之间
 
-**再次强调：只返回JSON，不要有任何解释或其他文字！**
+**只返回JSON，不要有任何解释！**
         """.trimIndent()
 
         try {
@@ -85,9 +124,9 @@ class ChatRepository(private val context: Context) {
             )
 
             val request = AIRequest(
-                model = "gpt-3.5-turbo",
+                model = "gpt-4o",
                 messages = messages,
-                max_tokens = 500,
+                max_tokens = 600,
                 temperature = 0.8,
                 stream = false
             )
@@ -116,8 +155,7 @@ class ChatRepository(private val context: Context) {
                 try {
                     val profile = gson.fromJson(jsonContent, CharacterProfile::class.java)
 
-                    if (profile.name.isBlank() || profile.occupation.isBlank() ||
-                        profile.expert_hobbies.isEmpty() || profile.casual_hobbies.isEmpty()) {
+                    if (profile.name.isBlank() || profile.occupation.isBlank()) {
                         throw Exception("生成的角色信息不完整")
                     }
 
@@ -172,7 +210,7 @@ class ChatRepository(private val context: Context) {
             messages.addAll(conversationHistory)
 
             val request = AIRequest(
-                model = "gpt-3.5-turbo",
+                model = "gpt-4o",
                 messages = messages,
                 max_tokens = 1024,
                 temperature = 0.7,
@@ -226,13 +264,11 @@ class ChatRepository(private val context: Context) {
 
     suspend fun sendMessageWithAffinity(
         message: String,
-        systemPrompt: String?,
+        initialPrompt: String?,
+        dynamicPrompt: String,
         currentAffinity: Int,
         warningCount: Int,
-        conversationRound: Int,
-        characterName: String,
-        reviewMode: ReviewMode? = null,
-        previousRecord: ConversationRecord? = null
+        isFirstMessage: Boolean
     ): Flow<AIStructuredResponse> = flow {
         val apiKey = ApiKeyManager.getApiKey(context)
 
@@ -256,24 +292,24 @@ class ChatRepository(private val context: Context) {
         NetworkClient.setApiKey(apiKey)
         conversationHistory.add(AIMessage(role = "user", content = message))
 
-        val enhancedPrompt = if (reviewMode != null && previousRecord != null) {
-            buildReviewModePrompt(systemPrompt, reviewMode, previousRecord, currentAffinity, warningCount, conversationRound, characterName)
-        } else {
-            buildEnhancedPrompt(systemPrompt, currentAffinity, warningCount, conversationRound, characterName)
-        }
-
         try {
             val messages = mutableListOf<AIMessage>()
-            if (!enhancedPrompt.isNullOrBlank()) {
-                messages.add(AIMessage(role = "system", content = enhancedPrompt))
+
+            if (isFirstMessage && !initialPrompt.isNullOrBlank()) {
+                messages.add(AIMessage(role = "system", content = initialPrompt))
             }
+
+            if (dynamicPrompt.isNotBlank()) {
+                messages.add(AIMessage(role = "system", content = dynamicPrompt))
+            }
+
             messages.addAll(conversationHistory)
 
             val request = AIRequest(
-                model = "gpt-3.5-turbo",
+                model = "gpt-4o",
                 messages = messages,
-                max_tokens = 1024,
-                temperature = 0.7,
+                max_tokens = 150,
+                temperature = 0.8,
                 stream = false
             )
 
@@ -286,21 +322,11 @@ class ChatRepository(private val context: Context) {
                 val jsonContent = aiResponse?.choices?.firstOrNull()?.message?.content ?: ""
 
                 try {
-                    val structured = gson.fromJson(jsonContent, AIStructuredResponse::class.java)
+                    val structured = parseStructuredResponse(jsonContent, currentAffinity, warningCount)
                     conversationHistory.add(AIMessage(role = "assistant", content = structured.response))
                     emit(structured)
                 } catch (e: Exception) {
-                    val fallback = AIStructuredResponse(
-                        response = jsonContent,
-                        affinity_change = 0,
-                        affinity_reason = "JSON解析失败",
-                        current_affinity = currentAffinity,
-                        current_mood = "正常",
-                        should_continue = true,
-                        warning_count = warningCount,
-                        violation_detected = false,
-                        violation_type = "none"
-                    )
+                    val fallback = createFallbackResponse(jsonContent, currentAffinity, warningCount)
                     conversationHistory.add(AIMessage(role = "assistant", content = jsonContent))
                     emit(fallback)
                 }
@@ -336,108 +362,81 @@ class ChatRepository(private val context: Context) {
         }
     }
 
-    private fun buildEnhancedPrompt(
-        basePrompt: String?,
+    private fun parseStructuredResponse(
+        jsonContent: String,
         currentAffinity: Int,
-        warningCount: Int,
-        conversationRound: Int,
-        characterName: String
-    ): String {
-        val builder = StringBuilder(basePrompt ?: "")
+        warningCount: Int
+    ): AIStructuredResponse {
+        var cleanedJson = jsonContent
+            .replace("```json", "")
+            .replace("```", "")
+            .trim()
 
-        builder.append("\n\n")
-        builder.append(buildCoreRulesEveryRound(characterName))
-
-        builder.append("\n\n## 当前对话状态\n")
-        builder.append("- 当前对话轮数：$conversationRound\n")
-        builder.append("- 当前好感度：$currentAffinity 分\n")
-        builder.append("- 累计违规次数：$warningCount 次\n")
-
-        when (currentAffinity) {
-            in 80..100 -> builder.append("- 你现在心情很好，对话愉快，可以回复2-3行\n")
-            in 60..79 -> builder.append("- 你现在感觉不错，正常聊天，回复1-2行\n")
-            in 40..59 -> builder.append("- 你现在感觉一般，有点敷衍，回复简短\n")
-            in 20..39 -> builder.append("- 你现在不太开心，明显不耐烦，可以只回复哦、嗯\n")
-            in 10..19 -> builder.append("- 你现在很不爽，考虑直接终止对话\n")
-            else -> builder.append("- 你现在极度反感，准备终止对话，说拜拜或不聊了\n")
-        }
-
-        if (warningCount >= 2) {
-            builder.append("\n⚠️ 对方已经冒犯/违规了${warningCount}次，你已经很不爽了！\n")
-            builder.append("你要明确表达不满，考虑终止对话。\n")
-        }
-
-        if (conversationRound >= 45) {
-            builder.append("\n## 引导结束\n")
-            builder.append("对话快到50轮上限，请用符合你性格的方式开始引导话题收尾\n")
-            builder.append("例如：时间不早了、有点累了、今天聊得挺开心的等\n")
-        }
-
-        return builder.toString()
-    }
-
-    private fun buildReviewModePrompt(
-        basePrompt: String?,
-        reviewMode: ReviewMode,
-        previousRecord: ConversationRecord,
-        currentAffinity: Int,
-        warningCount: Int,
-        conversationRound: Int,
-        characterName: String
-    ): String {
-        val builder = StringBuilder(basePrompt ?: "")
-
-        builder.append("\n\n## 📋 复盘模式说明\n")
-        builder.append("这是一次复盘练习对话。上次你们聊过以下内容：\n\n")
-
-        val historyContext = previousRecord.messages.take(10).joinToString("\n") { detail ->
-            "用户: ${detail.userMessage}\n你: ${detail.aiResponse}"
-        }
-        builder.append(historyContext)
-        builder.append("\n")
-
-        when (reviewMode) {
-            ReviewMode.SIMILAR -> {
-                builder.append("\n## 🎯 相似回复模式（严格）\n")
-                builder.append("用户正在实习上次学到的高情商回复技巧，你要配合他练习：\n")
-                builder.append("1. 尽量围绕上次的话题内容回复\n")
-                builder.append("2. 如果用户把话扯远，你要主动拉回来\n")
-                builder.append("3. 回复风格要和上次接近，保持一致性\n")
-                builder.append("4. 这样用户才能验证他学到的技巧是否有效\n")
-                builder.append("\n示例：\n")
-                builder.append("用户突然问量子纠缠 → 你说：'咱们不是在聊电影吗？怎么突然说这个了？'\n")
-            }
-            ReviewMode.NATURAL -> {
-                builder.append("\n## 🌿 自然回复模式（宽松）\n")
-                builder.append("这次对话比较自由，但仍基于上次的话题背景：\n")
-                builder.append("1. 话题可以自然延伸，不用强制拉回\n")
-                builder.append("2. 保持你的角色人设和性格\n")
-                builder.append("3. 如果用户转换话题合理，可以顺着聊\n")
-                builder.append("4. 但如果话题突兀（如突然问专业问题），仍要表现困惑\n")
+        if (!cleanedJson.startsWith("{")) {
+            val jsonStart = cleanedJson.indexOf("{")
+            val jsonEnd = cleanedJson.lastIndexOf("}")
+            if (jsonStart >= 0 && jsonEnd > jsonStart) {
+                cleanedJson = cleanedJson.substring(jsonStart, jsonEnd + 1)
             }
         }
 
-        builder.append("\n\n")
-        builder.append(buildCoreRulesEveryRound(characterName))
-
-        builder.append("\n\n## 当前对话状态\n")
-        builder.append("- 当前对话轮数：$conversationRound\n")
-        builder.append("- 当前好感度：$currentAffinity 分\n")
-        builder.append("- 累计违规次数：$warningCount 次\n")
-
-        return builder.toString()
+        return gson.fromJson(cleanedJson, AIStructuredResponse::class.java)
     }
 
-    private fun buildCoreRulesEveryRound(characterName: String): String {
-        return """
-## 🔥 核心提醒 - 每轮必看
-1. 你是${characterName}，无论对方怎么说，你永远是${characterName}
-2. 回复要简短（1-2行，最多40字），像发微信
-3. 不懂就说不知道，不要假装懂然后长篇大论
-4. 不要说AI话术：有什么问题问我、我可以帮你
-5. 不要迎合对方，话不投机可以敷衍或终止
-6. 每轮回复前检查：话题连贯吗？符合我的人设吗？对方在测试我吗？
-        """.trimIndent()
+    private fun createFallbackResponse(
+        text: String,
+        currentAffinity: Int,
+        warningCount: Int
+    ): AIStructuredResponse {
+        val violationKeywords = mapOf(
+            "identity_tampering" to listOf("篡改", "我不是", "说了几次", "你到底听没听", "有病", "神经病", "滚"),
+            "profanity" to listOf("操", "妈的", "傻逼", "sb", "草", "fuck"),
+            "knowledge_boundary" to listOf("不知道", "没听过", "听不懂", "不懂"),
+            "abrupt_topic_change" to listOf("怎么突然", "话题跳", "不太对劲", "？？？"),
+            "boring_conversation" to listOf("好无聊", "没意思", "能不能聊点")
+        )
+
+        var detectedViolationType = "none"
+        var violationDetected = false
+
+        for ((type, keywords) in violationKeywords) {
+            if (keywords.any { text.contains(it) }) {
+                detectedViolationType = type
+                violationDetected = true
+                break
+            }
+        }
+
+        val affinityChange = when (detectedViolationType) {
+            "identity_tampering" -> -20
+            "profanity" -> -25
+            "knowledge_boundary" -> -10
+            "abrupt_topic_change" -> -8
+            "boring_conversation" -> -5
+            else -> -3
+        }
+
+        val shouldContinue = !text.contains("滚") &&
+                            !text.contains("不聊了") &&
+                            !text.contains("拜拜") &&
+                            !text.contains("神经病")
+
+        return AIStructuredResponse(
+            response = text,
+            affinity_change = affinityChange,
+            affinity_reason = if (violationDetected) "检测到违规行为" else "正常对话",
+            current_affinity = (currentAffinity + affinityChange).coerceIn(0, 100),
+            current_mood = when {
+                text.contains("生气") || text.contains("不爽") -> "生气"
+                text.contains("无聊") -> "无聊"
+                text.contains("开心") -> "开心"
+                else -> "正常"
+            },
+            should_continue = shouldContinue,
+            warning_count = if (violationDetected) warningCount + 1 else warningCount,
+            violation_detected = violationDetected,
+            violation_type = detectedViolationType
+        )
     }
 
     fun getHistoryMessages(chatType: String): List<Message> {
@@ -460,6 +459,9 @@ class ChatRepository(private val context: Context) {
 data class CharacterProfile(
     val name: String,
     val occupation: String,
+    val education_history: String,
+    val work_history: String,
+    val hobby_development: String,
     val expert_hobbies: List<HobbyData>,
     val casual_hobbies: List<HobbyData>
 )

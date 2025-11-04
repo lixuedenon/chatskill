@@ -26,6 +26,9 @@ class CharacterCustomizationViewModel(application: Application) : AndroidViewMod
     private val _selectedEducation = MutableStateFlow<EducationLevel?>(null)
     val selectedEducation: StateFlow<EducationLevel?> = _selectedEducation.asStateFlow()
 
+    private val _selectedWorkStatus = MutableStateFlow<WorkStatus?>(null)
+    val selectedWorkStatus: StateFlow<WorkStatus?> = _selectedWorkStatus.asStateFlow()
+
     private val _isValid = MutableStateFlow(false)
     val isValid: StateFlow<Boolean> = _isValid.asStateFlow()
 
@@ -35,8 +38,9 @@ class CharacterCustomizationViewModel(application: Application) : AndroidViewMod
     private val _generationError = MutableStateFlow<String?>(null)
     val generationError: StateFlow<String?> = _generationError.asStateFlow()
 
-    private val _generatedCharacter = MutableStateFlow<CustomCharacter?>(null)
-    val generatedCharacter: StateFlow<CustomCharacter?> = _generatedCharacter.asStateFlow()
+    // 修改：返回角色和简历的Pair
+    private val _generatedCharacterWithBackground = MutableStateFlow<Pair<CustomCharacter, CharacterBackground>?>(null)
+    val generatedCharacterWithBackground: StateFlow<Pair<CustomCharacter, CharacterBackground>?> = _generatedCharacterWithBackground.asStateFlow()
 
     fun onAgeRangeSelected(ageRange: AgeRange) {
         _selectedAgeRange.value = ageRange
@@ -50,19 +54,31 @@ class CharacterCustomizationViewModel(application: Application) : AndroidViewMod
 
     fun onEducationSelected(education: EducationLevel) {
         _selectedEducation.value = education
+        if (education == EducationLevel.MIDDLE_SCHOOL || education == EducationLevel.HIGH_SCHOOL) {
+            if (_selectedWorkStatus.value == WorkStatus.STUDYING) {
+                _selectedWorkStatus.value = null
+            }
+        }
+        validateForm()
+    }
+
+    fun onWorkStatusSelected(workStatus: WorkStatus) {
+        _selectedWorkStatus.value = workStatus
         validateForm()
     }
 
     private fun validateForm() {
         _isValid.value = _selectedAgeRange.value != null &&
                 _selectedPersonality.value != null &&
-                _selectedEducation.value != null
+                _selectedEducation.value != null &&
+                _selectedWorkStatus.value != null
     }
 
     fun generateCharacter(gender: Gender) {
         val ageRange = _selectedAgeRange.value ?: return
         val personality = _selectedPersonality.value ?: return
         val education = _selectedEducation.value ?: return
+        val workStatus = _selectedWorkStatus.value ?: return
 
         _isGenerating.value = true
         _generationError.value = null
@@ -73,13 +89,15 @@ class CharacterCustomizationViewModel(application: Application) : AndroidViewMod
                     gender = gender,
                     ageRange = ageRange,
                     personality = personality,
-                    education = education
+                    education = education,
+                    workStatus = workStatus
                 ).collect { profile ->
                     val character = CustomCharacter(
                         name = profile.name,
                         ageRange = ageRange,
                         personality = personality,
                         education = education,
+                        workStatus = workStatus,
                         gender = gender,
                         occupation = profile.occupation,
                         expertHobbies = profile.expert_hobbies.map {
@@ -89,7 +107,14 @@ class CharacterCustomizationViewModel(application: Application) : AndroidViewMod
                             HobbyLevel(it.name, it.level)
                         }
                     )
-                    _generatedCharacter.value = character
+
+                    val background = CharacterBackground(
+                        education_history = profile.education_history,
+                        work_history = profile.work_history,
+                        hobby_development = profile.hobby_development
+                    )
+
+                    _generatedCharacterWithBackground.value = Pair(character, background)
                     _isGenerating.value = false
                 }
             } catch (e: Exception) {
@@ -104,6 +129,6 @@ class CharacterCustomizationViewModel(application: Application) : AndroidViewMod
     }
 
     fun clearGeneratedCharacter() {
-        _generatedCharacter.value = null
+        _generatedCharacterWithBackground.value = null
     }
 }

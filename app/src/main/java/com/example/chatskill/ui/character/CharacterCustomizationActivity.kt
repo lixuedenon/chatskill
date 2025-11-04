@@ -11,8 +11,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.ui.graphics.Color
 import com.example.chatskill.data.model.ChatConfig
-import com.example.chatskill.data.model.ChatType
-import com.example.chatskill.data.model.CustomCharacter
 import com.example.chatskill.ui.chat.ChatActivity
 
 class CharacterCustomizationActivity : ComponentActivity() {
@@ -32,32 +30,31 @@ class CharacterCustomizationActivity : ComponentActivity() {
                 themeColor = themeColor,
                 viewModel = viewModel,
                 onBackClick = { finish() },
-                onConfirm = { character ->
-                    startChatWithCustomCharacter(character, themeColorLong)
+                onConfirm = { characterWithBackground ->
+                    val (character, background) = characterWithBackground
+                    startChatWithCustomCharacter(character, background, themeColorLong)
                 }
             )
         }
     }
 
     private fun startChatWithCustomCharacter(
-        character: CustomCharacter,
+        character: com.example.chatskill.data.model.CustomCharacter,
+        background: com.example.chatskill.data.model.CharacterBackground,
         themeColor: Long
     ) {
-        val config = ChatConfig(
-            chatType = ChatType.BASIC_CHAT,
-            title = character.name,
-            themeColor = themeColor,
-            systemPrompt = character.toSystemPrompt(),
-            avatarUrl = null,
-            enableVoice = false,
-            placeholder = "输入消息..."
+        val config = ChatConfig.forCustomCharacter(
+            character = character,
+            background = background,
+            themeColor = themeColor
         )
 
         ChatActivity.start(
             context = this,
             config = config,
             enableAIToAI = false,
-            customCharacter = character
+            customCharacter = character,
+            characterBackground = background
         )
         finish()
     }

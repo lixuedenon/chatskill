@@ -28,8 +28,9 @@ object Constants {
     object Conversation {
         const val MAX_ROUNDS = 50
         const val REVIEW_THRESHOLD = 5
-        const val MAX_VIOLATIONS = 3
+        const val MAX_VIOLATIONS = 3.0f  // 改为浮点数，累积3.0分触发
         const val WARNING_THRESHOLD_ROUNDS = 45
+        const val FORGIVENESS_ROUNDS = 10  // 超过10轮无违规可以减0.5分
     }
 
     // Toast文案
